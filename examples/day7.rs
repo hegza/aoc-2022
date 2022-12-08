@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
-
 const INPUT: &str = include_str!("inputs/day7.txt");
 
 #[derive(Hash, PartialEq, Eq, Clone)]
@@ -238,8 +236,23 @@ fn main() -> anyhow::Result<()> {
         .filter(|dir| dir.size() <= 100000)
         .map(|dir| dir.size())
         .sum();
-
     println!("Part 1: {}", sizes);
+
+    let total = 70000000;
+    let required = 30000000;
+    let currenet = dtree.size();
+    let remaining = total - currenet;
+    let need_to_free = required - remaining;
+
+    let smallest_freeable = dtree
+        .dirs()
+        .iter()
+        .filter(|dir| dir.size() >= need_to_free)
+        .map(|dir| dir.size())
+        .min()
+        .unwrap();
+
+    println!("Part 2: {}", smallest_freeable);
 
     Ok(())
 }
