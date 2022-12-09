@@ -1,4 +1,3 @@
-use sliding_windows::{IterExt, Storage};
 use std::collections::HashSet;
 
 const INPUT: &str = include_str!("inputs/day9.txt");
@@ -33,6 +32,22 @@ fn update_tail_many(rope: &mut [(i32, i32)]) -> (i32, i32) {
     rope[rope.len() - 1]
 }
 
+fn mov(
+    dir: (i32, i32),
+    dist: usize,
+    hx: &mut i32,
+    hy: &mut i32,
+    tx: &mut i32,
+    ty: &mut i32,
+    visited: &mut HashSet<(i32, i32)>,
+) {
+    for _ in 0..dist {
+        mov_head(hx, hy, dir);
+        let ntail = update_tail(*hx, *hy, tx, ty);
+        visited.insert(ntail);
+    }
+}
+
 fn part1(cmds: &[(char, usize)]) -> usize {
     let (mut hx, mut hy) = (0, 0);
     let (mut tx, mut ty) = (0, 0);
@@ -45,38 +60,68 @@ fn part1(cmds: &[(char, usize)]) -> usize {
     for (cmd, dist) in cmds {
         match cmd {
             'R' => {
-                for _ in 0..*dist {
-                    mov_head(&mut hx, &mut hy, (1, 0));
-                    let ntail = update_tail(hx, hy, &mut tx, &mut ty);
-                    tail_visited.insert(ntail);
-                }
+                mov(
+                    (1, 0),
+                    *dist,
+                    &mut hx,
+                    &mut hy,
+                    &mut tx,
+                    &mut ty,
+                    &mut tail_visited,
+                );
             }
             'L' => {
-                for _ in 0..*dist {
-                    mov_head(&mut hx, &mut hy, (-1, 0));
-                    let ntail = update_tail(hx, hy, &mut tx, &mut ty);
-                    tail_visited.insert(ntail);
-                }
+                mov(
+                    (-1, 0),
+                    *dist,
+                    &mut hx,
+                    &mut hy,
+                    &mut tx,
+                    &mut ty,
+                    &mut tail_visited,
+                );
             }
             'D' => {
-                for _ in 0..*dist {
-                    mov_head(&mut hx, &mut hy, (0, 1));
-                    let ntail = update_tail(hx, hy, &mut tx, &mut ty);
-                    tail_visited.insert(ntail);
-                }
+                mov(
+                    (0, 1),
+                    *dist,
+                    &mut hx,
+                    &mut hy,
+                    &mut tx,
+                    &mut ty,
+                    &mut tail_visited,
+                );
             }
             'U' => {
-                for _ in 0..*dist {
-                    mov_head(&mut hx, &mut hy, (0, -1));
-                    let ntail = update_tail(hx, hy, &mut tx, &mut ty);
-                    tail_visited.insert(ntail);
-                }
+                mov(
+                    (0, -1),
+                    *dist,
+                    &mut hx,
+                    &mut hy,
+                    &mut tx,
+                    &mut ty,
+                    &mut tail_visited,
+                );
             }
             d => panic!("unknown direction: {}", d),
         }
     }
 
     tail_visited.len()
+}
+
+fn mov_many(
+    dir: (i32, i32),
+    dist: usize,
+    rope: &mut [(i32, i32)],
+    visited: &mut HashSet<(i32, i32)>,
+) {
+    for _ in 0..dist {
+        let (hx, hy) = &mut rope[0];
+        mov_head(hx, hy, dir);
+        update_tail_many(rope);
+        visited.insert(rope[rope.len() - 1]);
+    }
 }
 
 fn part2(cmds: &[(char, usize)]) -> usize {
@@ -88,38 +133,10 @@ fn part2(cmds: &[(char, usize)]) -> usize {
 
     for (cmd, dist) in cmds {
         match cmd {
-            'R' => {
-                for _ in 0..*dist {
-                    let (hx, hy) = &mut rope[0];
-                    mov_head(hx, hy, (1, 0));
-                    update_tail_many(&mut rope);
-                    tail_visited.insert(rope[rope.len() - 1]);
-                }
-            }
-            'L' => {
-                for _ in 0..*dist {
-                    let (hx, hy) = &mut rope[0];
-                    mov_head(hx, hy, (-1, 0));
-                    update_tail_many(&mut rope);
-                    tail_visited.insert(rope[rope.len() - 1]);
-                }
-            }
-            'D' => {
-                for _ in 0..*dist {
-                    let (hx, hy) = &mut rope[0];
-                    mov_head(hx, hy, (0, 1));
-                    update_tail_many(&mut rope);
-                    tail_visited.insert(rope[rope.len() - 1]);
-                }
-            }
-            'U' => {
-                for _ in 0..*dist {
-                    let (hx, hy) = &mut rope[0];
-                    mov_head(hx, hy, (0, -1));
-                    update_tail_many(&mut rope);
-                    tail_visited.insert(rope[rope.len() - 1]);
-                }
-            }
+            'R' => mov_many((1, 0), *dist, &mut rope, &mut tail_visited),
+            'L' => mov_many((-1, 0), *dist, &mut rope, &mut tail_visited),
+            'D' => mov_many((0, 1), *dist, &mut rope, &mut tail_visited),
+            'U' => mov_many((0, -1), *dist, &mut rope, &mut tail_visited),
             d => panic!("unknown direction: {}", d),
         }
     }
