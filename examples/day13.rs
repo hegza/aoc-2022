@@ -44,6 +44,12 @@ impl std::cmp::PartialOrd for Data {
     }
 }
 
+impl std::cmp::Ord for Data {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).or(Some(Ordering::Equal)).unwrap()
+    }
+}
+
 impl std::str::FromStr for Data {
     type Err = Infallible;
 
@@ -124,7 +130,7 @@ impl std::str::FromStr for Data {
     }
 }
 
-fn main() -> anyhow::Result<()> {
+fn part1() -> usize {
     let pairs: Vec<(Data, Data)> = INPUT
         .split("\n\n")
         .map(|pair| {
@@ -151,7 +157,32 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
-    println!("Part 1: {}", indices.sum::<usize>());
-    println!("Part 2: {}", 0);
+    indices.sum::<usize>()
+}
+
+fn main() -> anyhow::Result<()> {
+    println!("Part 1: {}", part1());
+
+    let mut data: Vec<Data> = INPUT
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| Data::from_str(line).unwrap())
+        .collect_vec();
+    let dividers = vec![
+        Data::List(vec![Data::List(vec![Data::Int(2)])]),
+        Data::List(vec![Data::List(vec![Data::Int(6)])]),
+    ];
+    data.extend(dividers.clone());
+    data.sort();
+
+    let indices = data.iter().enumerate().filter_map(|(idx, data)| {
+        if dividers.contains(data) {
+            Some(idx + 1)
+        } else {
+            None
+        }
+    });
+
+    println!("Part 2: {}", indices.product::<usize>());
     Ok(())
 }
