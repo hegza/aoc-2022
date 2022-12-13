@@ -129,7 +129,7 @@ fn round(monkeys: &mut [Monkey], relief: bool, divs: &[usize]) -> [usize; 8] {
     for idx in 0..8 {
         let monkey = &mut monkeys[idx];
         let thrown = monkey.take_turn(relief, common_denom);
-        inspections[idx] += (thrown.len() as usize);
+        inspections[idx] += thrown.len() as usize;
         for (next, item) in thrown {
             monkeys[next].items.push(item);
         }
