@@ -1,6 +1,5 @@
-use std::{cmp::Ordering, convert::Infallible, str::FromStr};
-
 use itertools::Itertools;
+use std::{cmp::Ordering, convert::Infallible, str::FromStr};
 
 const INPUT: &str = include_str!("inputs/day13.txt");
 
@@ -131,7 +130,7 @@ impl std::str::FromStr for Data {
 }
 
 fn part1() -> usize {
-    let pairs: Vec<(Data, Data)> = INPUT
+    let pairs = INPUT
         .split("\n\n")
         .map(|pair| {
             let (first, second) = pair.split_once("\n").expect("malformed input");
@@ -143,14 +142,7 @@ fn part1() -> usize {
         .collect_vec();
 
     let indices = pairs.iter().enumerate().filter_map(|(idx, (a, b))| {
-        if match a.partial_cmp(b) {
-            Some(ord) => match ord {
-                Ordering::Less => true,
-                Ordering::Equal => true,
-                Ordering::Greater => false,
-            },
-            None => false,
-        } {
+        if a.cmp(b) != Ordering::Greater {
             Some(idx + 1)
         } else {
             None
@@ -160,10 +152,8 @@ fn part1() -> usize {
     indices.sum::<usize>()
 }
 
-fn main() -> anyhow::Result<()> {
-    println!("Part 1: {}", part1());
-
-    let mut data: Vec<Data> = INPUT
+fn part2() -> usize {
+    let mut data = INPUT
         .lines()
         .filter(|line| !line.is_empty())
         .map(|line| Data::from_str(line).unwrap())
@@ -182,7 +172,11 @@ fn main() -> anyhow::Result<()> {
             None
         }
     });
+    indices.product::<usize>()
+}
 
-    println!("Part 2: {}", indices.product::<usize>());
+fn main() -> anyhow::Result<()> {
+    println!("Part 1: {}", part1());
+    println!("Part 2: {}", part2());
     Ok(())
 }
