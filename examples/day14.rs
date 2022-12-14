@@ -14,6 +14,7 @@ impl Point {
     }
 }
 
+#[derive(Clone)]
 struct Wall(Point, Point);
 
 impl Wall {
@@ -67,57 +68,52 @@ fn step(sand: &mut Point, walls: &[Wall]) -> bool {
     false
 }
 
-fn part1() -> usize {
-    let mut walls = INPUT
-        .lines()
-        .map(|line| {
-            line.split("->")
-                .map(|s| {
-                    let (x, y) = s.trim().split_once(',').unwrap();
-                    Point(x.parse::<isize>().unwrap(), y.parse::<isize>().unwrap())
-                })
-                .tuple_windows::<(Point, Point)>()
-                .map(|(p0, p1)| {
-                    // Sort the points in ascending order for algo simplicity later
-                    if p0 <= p1 {
-                        Wall(p0, p1)
-                    } else {
-                        Wall(p1, p0)
-                    }
-                })
-        })
-        .flatten()
-        .collect_vec();
-    let abyss = walls
-        .iter()
-        .map(|w| vec![w.0.y(), w.1.y()])
-        .flatten()
-        .max()
-        .unwrap()
-        + 1;
-
+fn part1(mut walls: Vec<Wall>, bottom: isize) -> usize {
     let spawn = Point(500, 0);
     let mut sand_count = 0;
+
     // Spawn and step sand until it doesn't work anymore
     'outer: loop {
         let mut sand = spawn.clone();
         while step(&mut sand, &walls) {
-            if sand.y() >= abyss {
+            if sand.y() >= bottom {
                 break 'outer;
             }
         }
         // Make sand into a wall
         walls.push(Wall(sand.clone(), sand.clone()));
         sand_count += 1;
-        if sand_count % 1000 == 0 {
-            println!("Sand dropped: {}", sand_count);
-        }
     }
     sand_count
 }
 
+fn part2(mut walls: Vec<Wall>, bottom: isize) -> usize {
+    // Add floor
+    walls.push(Wall(Point(isize::MIN, bottom), Point(isize::MAX, bottom)));
+
+    let spawn = Point(500, 0);
+    let mut sand_count = 0;
+
+    // Spawn and step sand until it doesn't work anymore
+    loop {
+        let mut sand = spawn.clone();
+        while step(&mut sand, &walls) {}
+
+        // Make sand into a wall
+        walls.push(Wall(sand.clone(), sand.clone()));
+        sand_count += 1;
+
+        // Stop when sand comes to rest on spawn point
+        if sand == spawn {
+            break;
+        }
+    }
+
+    sand_count
+}
+
 fn main() -> anyhow::Result<()> {
-    let mut walls = INPUT
+    let walls = INPUT
         .lines()
         .map(|line| {
             line.split("->")
@@ -144,29 +140,8 @@ fn main() -> anyhow::Result<()> {
         .max()
         .unwrap()
         + 2;
-    walls.push(Wall(Point(isize::MIN, bottom), Point(isize::MAX, bottom)));
 
-    let spawn = Point(500, 0);
-    let mut sand_count = 0;
-    // Spawn and step sand until it doesn't work anymore
-    loop {
-        let mut sand = spawn.clone();
-        while step(&mut sand, &walls) {}
-
-        // Make sand into a wall
-        walls.push(Wall(sand.clone(), sand.clone()));
-        sand_count += 1;
-
-        if sand == spawn {
-            break;
-        }
-
-        if sand_count % 1000 == 0 {
-            println!("Sand dropped: {}", sand_count);
-        }
-    }
-
-    println!("Part 1: {}", part1());
-    println!("Part 2: {}", sand_count);
+    println!("Part 1: {}", part1(walls.clone(), bottom));
+    println!("Part 2: {}", part2(walls.clone(), bottom));
     Ok(())
 }
