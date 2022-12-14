@@ -3,13 +3,13 @@ use itertools::Itertools;
 const INPUT: &str = include_str!("inputs/day14.txt");
 
 #[derive(Clone, PartialEq, PartialOrd)]
-struct Point(usize, usize);
+struct Point(isize, isize);
 
 impl Point {
-    fn x(&self) -> usize {
+    fn x(&self) -> isize {
         self.0
     }
-    fn y(&self) -> usize {
+    fn y(&self) -> isize {
         self.1
     }
 }
@@ -67,14 +67,14 @@ fn step(sand: &mut Point, walls: &[Wall]) -> bool {
     false
 }
 
-fn main() -> anyhow::Result<()> {
+fn part1() -> usize {
     let mut walls = INPUT
         .lines()
         .map(|line| {
             line.split("->")
                 .map(|s| {
                     let (x, y) = s.trim().split_once(',').unwrap();
-                    Point(x.parse::<usize>().unwrap(), y.parse::<usize>().unwrap())
+                    Point(x.parse::<isize>().unwrap(), y.parse::<isize>().unwrap())
                 })
                 .tuple_windows::<(Point, Point)>()
                 .map(|(p0, p1)| {
@@ -113,8 +113,60 @@ fn main() -> anyhow::Result<()> {
             println!("Sand dropped: {}", sand_count);
         }
     }
+    sand_count
+}
 
-    println!("Part 1: {}", sand_count);
-    //println!("Part 2: {}", find_zero_duplicate_window(14));
+fn main() -> anyhow::Result<()> {
+    let mut walls = INPUT
+        .lines()
+        .map(|line| {
+            line.split("->")
+                .map(|s| {
+                    let (x, y) = s.trim().split_once(',').unwrap();
+                    Point(x.parse::<isize>().unwrap(), y.parse::<isize>().unwrap())
+                })
+                .tuple_windows::<(Point, Point)>()
+                .map(|(p0, p1)| {
+                    // Sort the points in ascending order for algo simplicity later
+                    if p0 <= p1 {
+                        Wall(p0, p1)
+                    } else {
+                        Wall(p1, p0)
+                    }
+                })
+        })
+        .flatten()
+        .collect_vec();
+    let bottom = walls
+        .iter()
+        .map(|w| vec![w.0.y(), w.1.y()])
+        .flatten()
+        .max()
+        .unwrap()
+        + 2;
+    walls.push(Wall(Point(isize::MIN, bottom), Point(isize::MAX, bottom)));
+
+    let spawn = Point(500, 0);
+    let mut sand_count = 0;
+    // Spawn and step sand until it doesn't work anymore
+    loop {
+        let mut sand = spawn.clone();
+        while step(&mut sand, &walls) {}
+
+        // Make sand into a wall
+        walls.push(Wall(sand.clone(), sand.clone()));
+        sand_count += 1;
+
+        if sand == spawn {
+            break;
+        }
+
+        if sand_count % 1000 == 0 {
+            println!("Sand dropped: {}", sand_count);
+        }
+    }
+
+    println!("Part 1: {}", part1());
+    println!("Part 2: {}", sand_count);
     Ok(())
 }
