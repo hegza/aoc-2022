@@ -40,18 +40,24 @@ fn part1(balls: &[Ball]) -> usize {
     (min_x..max_x)
         .filter(|x| balls.iter().any(|ball| ball.covers_point((*x, scan_y))))
         .count()
-        // Minus one for the one beacon that is exactly on the scanned line
-        -1
 }
 
 fn part2(balls: &[Ball]) -> i64 {
-    for y in 0..=4000000 {
-        for x in 0..=4000000 {
-            if !balls.iter().any(|ball| ball.covers_point((x, y))) {
-                println!("{x}, {y}, {}", x as i64 * 4000000 + y as i64);
-                return x as i64 * 4000000 + y as i64;
+    let mut y = 0;
+    while y <= 4000000 {
+        let mut x = 0;
+        'x: while x <= 4000000 {
+            for ball in balls {
+                // If we hit a beacon, project it to current y, and skip the
+                // beacon by moving to its right edge
+                if ball.covers_point((x, y)) {
+                    x = ball.project_x(y).unwrap().1 + 1;
+                    continue 'x;
+                }
             }
+            return x as i64 * 4000000 + y as i64;
         }
+        y += 1;
     }
     panic!("no beacon found")
 }
