@@ -23,7 +23,8 @@ impl Ball {
         if ydist > self.rad {
             None
         } else {
-            Some((self.pos.0 - ydist as isize, self.pos.0 + ydist as isize))
+            let dx = self.rad - ydist;
+            Some((self.pos.0 - dx as isize, self.pos.0 + dx as isize))
         }
     }
 }
