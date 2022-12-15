@@ -70,7 +70,7 @@ fn main() -> anyhow::Result<()> {
                         .unwrap()
                         .1
                         .chars()
-                        .filter(|c| c.is_numeric())
+                        .filter(|c| c.is_numeric() || *c == '-')
                         .collect();
                     let num = rhs.parse::<isize>().unwrap();
                     match (c, parsing_beacon) {
