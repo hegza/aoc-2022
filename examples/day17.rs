@@ -1,5 +1,8 @@
 use itertools::Itertools;
-use std::ops;
+use std::{
+    ops,
+    time::{Duration, SystemTime},
+};
 
 const INPUT: &str = include_str!("inputs/day17.txt");
 
@@ -65,17 +68,29 @@ impl Block {
         }
     }
     /// Returns the y of the square above this block
-    fn top(&self) -> usize {
+    fn above(&self) -> usize {
         self.layout.iter().map(|pos| pos.1).max().unwrap() + self.pos.1 + 1
     }
+    fn top(&self) -> usize {
+        self.layout.iter().map(|pos| pos.1).max().unwrap() + self.pos.1
+    }
     /// Returns the x of the square right of this block
-    fn right(&self) -> usize {
+    fn to_right(&self) -> usize {
         self.layout.iter().map(|pos| pos.0).max().unwrap() + self.pos.0 + 1
     }
     fn draw(&self, draw_map: &mut Vec<Vec<bool>>) {
         for (x, y) in self.layout.iter().map(|pos| (self.pos + *pos).into()) {
             draw_map[y][x] = true;
         }
+    }
+
+    fn collide_point(&self, pos: &Pos) -> bool {
+        for spos in self.layout.iter().map(|pos| *pos + self.pos) {
+            if &spos == pos {
+                return true;
+            }
+        }
+        false
     }
     /// Check for any overlap
     fn collide(&self, other: &Block) -> bool {
@@ -90,11 +105,11 @@ impl Block {
     }
 
     // Returns true if the block came to rest
-    fn tick(&mut self, push_right: bool, map: &[Block]) -> bool {
+    fn tick(&mut self, push_right: bool, map: &[Block], floor_h: usize) -> bool {
         let Pos(x, y) = self.pos;
 
         // 1. Push (right or left)
-        let nx = if push_right && self.right() < WIDTH {
+        let nx = if push_right && self.to_right() < WIDTH {
             Some(x + 1)
         } else if !push_right && x != 0 {
             Some(x - 1)
@@ -106,6 +121,9 @@ impl Block {
             // If there is no collision, update x
             if !map
                 .iter()
+                // Reverse iterate for efficiency because top-most blocks are...
+                // at the top of the stack
+                .rev()
                 .any(|b| b.collide(&self.with_pos((nx, y).into())))
             {
                 self.pos.0 = nx;
@@ -115,7 +133,7 @@ impl Block {
         let Pos(x, y) = self.pos;
 
         // 2. Fall
-        if y == 0 {
+        if y == floor_h {
             // If the block is already on the floor, it came to rest
             return true;
         }
@@ -124,6 +142,9 @@ impl Block {
         // If there is no collision, update y
         if !map
             .iter()
+            // Reverse iterate for efficiency because top-most blocks are...
+            // at the top of the stack
+            .rev()
             .any(|b| b.collide(&self.with_pos((x, ny).into())))
         {
             self.pos.1 = ny;
@@ -160,13 +181,120 @@ fn draw_blocks(blocks: &[Block]) {
     draw_map(&v);
 }
 
+fn any_collision(point: &Pos, blocks: &[Block]) -> bool {
+    blocks.iter().rev().any(|b| b.collide_point(point))
+}
+
+fn part1(
+    mut push_dirs: impl Iterator<Item = bool>,
+    mut block_order: impl Iterator<Item = BlockKind>,
+) -> usize {
+    let mut blocks = vec![];
+
+    let mut height = 0;
+    let mut floor = 0;
+    const NUM_BLOCKS: usize = 2022usize;
+    for _ in 0..NUM_BLOCKS {
+        let mut block = Block::new((2, height + 3).into(), block_order.next().unwrap());
+        while let Some(push_dir) = push_dirs.next() {
+            if block.tick(push_dir, &blocks, 0) {
+                break;
+            }
+        }
+        blocks.push(block);
+        height = blocks
+            .iter()
+            .map(|b: &Block| b.above())
+            .max()
+            .unwrap_or(0)
+            .max(height);
+        floor = blocks
+            .iter()
+            .map(|b| b.pos.1)
+            .min()
+            .unwrap_or(floor)
+            .max(floor);
+    }
+    height
+}
+
+/// Returns the number of optimized blocks
+fn optimize(blocks: &mut Vec<Block>, floor: usize) -> usize {
+    let prelen = blocks.len();
+    blocks.retain(|block| block.pos.1 >= floor);
+    let postlen = blocks.len();
+
+    /*
+    if prelen != postlen {
+        println!("Optimized {} of {}", prelen - postlen, prelen);
+    }
+    */
+
+    prelen - postlen
+}
+
+fn part2(
+    mut push_dirs: impl Iterator<Item = bool>,
+    mut block_order: impl Iterator<Item = BlockKind>,
+) -> usize {
+    let mut blocks = vec![];
+
+    let mut height = 0;
+    let mut floor = 0;
+
+    let mut pr = 0;
+    let mut pt = SystemTime::now();
+    const NUM_BLOCKS: usize = 1000000000000usize;
+    for round in 0..NUM_BLOCKS {
+        let since_last_measure = SystemTime::now().duration_since(pt).unwrap();
+        if since_last_measure >= Duration::from_secs(1) {
+            let rps = round - pr;
+            println!(
+                "Blocks per second: {} ({:.0} minutes remaining)",
+                rps,
+                ((NUM_BLOCKS - round) / rps) as f64 / 60.0
+            );
+            pr = round;
+            pt = SystemTime::now();
+        }
+
+        let mut block = Block::new((2, height + 3).into(), block_order.next().unwrap());
+        while let Some(push_dir) = push_dirs.next() {
+            if block.tick(push_dir, &blocks, 0) {
+                break;
+            }
+        }
+        blocks.push(block);
+
+        // Update height at end of round
+        height = blocks.iter().map(|b: &Block| b.above()).max().unwrap_or(0);
+        floor = blocks.iter().map(|b| b.pos.1).min().unwrap_or(floor);
+
+        // Lift floor
+        if round % 100 == 0 {
+            if let Some(f) = (floor..height)
+                .find(|&y| (0..WIDTH).all(|x| any_collision(&(x, y).into(), &blocks)))
+            {
+                floor = f;
+            }
+            optimize(&mut blocks, floor);
+        }
+        /*
+        if round % (NUM_BLOCKS / 100) == 0 {
+            println!("Progress: {} %", round / (NUM_BLOCKS / 100));
+        }
+        */
+    }
+    height
+}
+
 fn main() -> anyhow::Result<()> {
-    let mut push_dirs = INPUT
+    let push_dirs = INPUT
         .chars()
         .filter(|c| ['>', '<'].contains(c))
         .map(|push| push == '>')
         .cycle();
-    let mut block_order = [
+    let block_order = [
         BlockKind::Dash,
         BlockKind::Plus,
         BlockKind::J,
@@ -176,32 +304,14 @@ fn main() -> anyhow::Result<()> {
     .iter()
     .cycle();
 
-    let mut blocks = vec![];
+    /*println!(
+        "Part 1: {}",
+        part1(push_dirs.clone(), block_order.clone().cloned())
+    );*/
+    println!(
+        "Part 2: {}",
+        part2(push_dirs.clone(), block_order.clone().cloned())
+    );
 
-    let mut top = 0;
-    for round in 0..2022 {
-        let mut block = Block::new((2, top + 3).into(), *block_order.next().unwrap());
-        loop {
-            let push_dir = push_dirs.next().unwrap();
-            if block.tick(push_dir, &blocks) {
-                break;
-            }
-        }
-        blocks.push(block);
-        top = blocks.iter().map(|b: &Block| b.top()).max().unwrap_or(0);
-
-        /*
-        if round + 1 <= 3 {
-            println!("Block #{}", round + 1);
-            println!();
-            draw_blocks(&blocks);
-            println!("Top: {}", top);
-            println!();
-        }
-        */
-    }
-
-    println!("Part 1: {}", top);
-    //println!("Part 2: {}", find_zero_duplicate_window(14));
     Ok(())
 }
