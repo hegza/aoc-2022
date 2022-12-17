@@ -7,3 +7,6 @@ run IDX:
 release IDX:
     cargo run --example=day{{IDX}} --release
 
+profile IDX:
+    CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --example=day{{IDX}}
+
