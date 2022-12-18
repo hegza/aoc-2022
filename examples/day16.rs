@@ -22,8 +22,10 @@ fn best_strategy(
     jumps: &HashMap<Id, Vec<Id>>,
     nz_wgts: &HashMap<Id, usize>,
     opened: HashSet<Id>,
-    curpath: Vec<Id>,
+    mut curpath: Vec<Id>,
 ) -> usize {
+    curpath.push(*pos);
+
     // If there is no time left, there are no more strategies left
     if time_rem == 0 {
         return 0;
@@ -54,8 +56,6 @@ fn best_strategy(
         }
 
         let mut opened = opened.clone();
-        let mut curpath = curpath.clone();
-        curpath.push(*pos);
 
         // Strats for **not** opening this node (-0) + moving through tunnel (-1)
         let dont_open = best_strategy(
@@ -71,8 +71,8 @@ fn best_strategy(
         // Strats for opening this node (-1) + moving through tunnel (-1)
         if open_this != 0 && time_rem > 2 {
             opened.insert(*pos);
-            let open =
-                open_this + best_strategy(dest, time_rem - 2, jumps, nz_wgts, opened, curpath);
+            let open = open_this
+                + best_strategy(dest, time_rem - 2, jumps, nz_wgts, opened, curpath.clone());
             all_strats.push(open);
         }
     }
@@ -85,7 +85,7 @@ fn best_strategy(
 
 fn part1(jumps: &HashMap<Id, Vec<Id>>, nz_wgts: &HashMap<Id, usize>) -> usize {
     let curpos = str_to_id("AA");
-    best_strategy(&curpos, 30, &jumps, &nz_wgts, HashSet::new(), vec![curpos])
+    best_strategy(&curpos, 30, &jumps, &nz_wgts, HashSet::new(), vec![])
 }
 
 fn part2(jumps: &HashMap<Id, Vec<Id>>, nz_wgts: &HashMap<Id, usize>) -> usize {
