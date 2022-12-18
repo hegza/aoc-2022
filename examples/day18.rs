@@ -6,6 +6,9 @@ const INPUT: &str = include_str!("inputs/day18.txt");
 const XLEN: usize = 22;
 const YLEN: usize = 22;
 const ZLEN: usize = 21;
+const XMAX: usize = XLEN - 1;
+const YMAX: usize = YLEN - 1;
+const ZMAX: usize = ZLEN - 1;
 
 fn part1(points: Vec<(usize, usize, usize)>, space: &Vec<Vec<Vec<bool>>>) -> usize {
     let mut sum = 0;
@@ -17,19 +20,19 @@ fn part1(points: Vec<(usize, usize, usize)>, space: &Vec<Vec<Vec<bool>>>) -> usi
         if x == 0 || !space[z][y][x - 1] {
             score += 1;
         }
-        if x == XLEN - 1 || !space[z][y][x + 1] {
+        if x == XMAX || !space[z][y][x + 1] {
             score += 1;
         }
         if y == 0 || !space[z][y - 1][x] {
             score += 1;
         }
-        if y == YLEN - 1 || !space[z][y + 1][x] {
+        if y == YMAX || !space[z][y + 1][x] {
             score += 1;
         }
         if z == 0 || !space[z - 1][y][x] {
             score += 1;
         }
-        if z == ZLEN - 1 || !space[z + 1][y][x] {
+        if z == ZMAX || !space[z + 1][y][x] {
             score += 1;
         }
         sum += score;
@@ -55,13 +58,13 @@ fn dfs_exterior_points(
 
     // Add available directions
     let mut dirs = Vec::with_capacity(6);
-    if x < XLEN - 1 {
+    if x < XMAX {
         dirs.push((x + 1, y, z));
     }
-    if y < YLEN - 1 {
+    if y < YMAX {
         dirs.push((x, y + 1, z));
     }
-    if z < ZLEN - 1 {
+    if z < ZMAX {
         dirs.push((x, y, z + 1));
     }
     if x != 0 {
@@ -105,7 +108,7 @@ fn main() -> anyhow::Result<()> {
     for z in 0..ZLEN {
         for y in 0..YLEN {
             for x in 0..XLEN {
-                if z == 0 || y == 0 || x == 0 || z == ZLEN - 1 || y == YLEN - 1 || x == XLEN - 1 {
+                if z == 0 || y == 0 || x == 0 || z == ZMAX || y == YMAX || x == XMAX {
                     face_points.push((x, y, z));
                 }
             }
