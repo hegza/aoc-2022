@@ -53,24 +53,34 @@ fn dfs_exterior_points(
 
     // Check for empty space in each direction
 
-    if x < XLEN - 1 && !volume[z][y][x + 1] && !visited.contains(&(x + 1, y, z)) {
-        v.extend(dfs_exterior_points(x + 1, y, z, volume, visited));
+    // Add available directions
+    let mut dirs = Vec::with_capacity(6);
+    if x < XLEN - 1 {
+        dirs.push((x + 1, y, z));
     }
-    if y < YLEN - 1 && !volume[z][y + 1][x] && !visited.contains(&(x, y + 1, z)) {
-        v.extend(dfs_exterior_points(x, y + 1, z, volume, visited));
+    if y < YLEN - 1 {
+        dirs.push((x, y + 1, z));
     }
-    if z < ZLEN - 1 && !volume[z + 1][y][x] && !visited.contains(&(x, y, z + 1)) {
-        v.extend(dfs_exterior_points(x, y, z + 1, volume, visited));
+    if z < ZLEN - 1 {
+        dirs.push((x, y, z + 1));
     }
-    if x != 0 && !volume[z][y][x - 1] && !visited.contains(&(x - 1, y, z)) {
-        v.extend(dfs_exterior_points(x - 1, y, z, volume, visited));
+    if x != 0 {
+        dirs.push((x - 1, y, z));
     }
-    if y != 0 && !volume[z][y - 1][x] && !visited.contains(&(x, y - 1, z)) {
-        v.extend(dfs_exterior_points(x, y - 1, z, volume, visited));
+    if y != 0 {
+        dirs.push((x, y - 1, z));
     }
-    if z != 0 && !volume[z - 1][y][x] && !visited.contains(&(x, y, z - 1)) {
-        v.extend(dfs_exterior_points(x, y, z - 1, volume, visited));
+    if z != 0 {
+        dirs.push((x, y, z - 1))
     }
+
+    // DFS through available directions
+    for (x, y, z) in dirs {
+        if !volume[z][y][x] && !visited.contains(&(x, y, z)) {
+            v.extend(dfs_exterior_points(x, y, z, volume, visited));
+        }
+    }
+
     v
 }
 
