@@ -23,17 +23,17 @@ fn best_strategy(
     nz_wgts: &HashMap<Id, usize>,
     opened: HashSet<Id>,
     mut curpath: Vec<Id>,
-) -> usize {
+) -> (usize, Vec<Id>) {
     curpath.push(*pos);
 
     // If there is no time left, there are no more strategies left
     if time_rem == 0 {
-        return 0;
+        return (0, curpath);
     }
 
     // All non-zero valves open, no further actions can add value
     if opened.len() == nz_wgts.len() {
-        return 0;
+        return (0, curpath);
     }
 
     let mut all_strats = vec![];
@@ -45,7 +45,7 @@ fn best_strategy(
     let mut open_this = 0;
     if !opened.contains(pos) {
         open_this = (time_rem - 1) * wgt;
-        all_strats.push(open_this);
+        all_strats.push((open_this, curpath.clone()));
     };
 
     // Add strategies in subsequent nodes
@@ -71,28 +71,66 @@ fn best_strategy(
         // Strats for opening this node (-1) + moving through tunnel (-1)
         if open_this != 0 && time_rem > 2 {
             opened.insert(*pos);
-            let open = open_this
-                + best_strategy(dest, time_rem - 2, jumps, nz_wgts, opened, curpath.clone());
-            all_strats.push(open);
+            let strat = best_strategy(dest, time_rem - 2, jumps, nz_wgts, opened, curpath.clone());
+            let open_val = open_this + strat.0;
+            all_strats.push((open_val, strat.1));
         }
     }
 
     // Identify the best strategy available at this position with current time
-    let best_here = *all_strats.iter().max().unwrap_or(&0);
+    let best_here = all_strats.iter().max().unwrap_or(&(0, curpath)).clone();
 
     best_here
 }
 
 fn part1(jumps: &HashMap<Id, Vec<Id>>, nz_wgts: &HashMap<Id, usize>) -> usize {
     let curpos = str_to_id("AA");
-    best_strategy(&curpos, 30, &jumps, &nz_wgts, HashSet::new(), vec![])
+    best_strategy(&curpos, 30, &jumps, &nz_wgts, HashSet::new(), vec![]).0
 }
 
-fn part2(jumps: &HashMap<Id, Vec<Id>>, nz_wgts: &HashMap<Id, usize>) -> usize {
-    let mypos = str_to_id("AA");
-    let elepos = str_to_id("AA");
+fn do_greedy_next(
+    curpos: &Id,
+    time_rem: usize,
+    opened: &mut HashSet<Id>,
+    jumps: &HashMap<Id, Vec<Id>>,
+    nz_wgts: &HashMap<Id, usize>,
+) -> (Id, usize) {
+    // Find the strategy that is currently the best
+    let best = best_strategy(curpos, time_rem, jumps, nz_wgts, opened.clone(), vec![]).1;
 
-    best_strategy(&mypos, 24, &jumps, &nz_wgts, HashSet::new(), vec![mypos])
+    // If there is a valve here, open it
+    if let Some(wgt) = nz_wgts.get(curpos) {
+        opened.insert(*curpos);
+        let pressure = (time_rem - 1) * wgt;
+        return (*curpos, pressure);
+    } else {
+        // If the next step is somewhere else, we change position
+        return (*best.get(1).unwrap_or(curpos), 0);
+    }
+}
+
+/// Greedy
+fn part2(jumps: &HashMap<Id, Vec<Id>>, nz_wgts: &HashMap<Id, usize>) -> usize {
+    let mut released = 0;
+
+    let mut mypos = str_to_id("AA");
+    let mut elepos = str_to_id("AA");
+    let mut time_rem = 24;
+    let mut opened = HashSet::new();
+
+    while time_rem != 0 {
+        println!("Time remaining: {time_rem}");
+        let mynext = do_greedy_next(&mypos, time_rem, &mut opened, jumps, nz_wgts);
+        mypos = mynext.0;
+        released += mynext.1;
+
+        let elenext = do_greedy_next(&elepos, time_rem, &mut opened, jumps, nz_wgts);
+        elepos = elenext.0;
+        released += elenext.1;
+
+        time_rem -= 1;
+    }
+    released
 }
 
 fn main() -> anyhow::Result<()> {
@@ -132,6 +170,6 @@ fn main() -> anyhow::Result<()> {
     };
 
     println!("Part 1: {}", part1(&jumps, &flows));
-    //println!("Part 2: {}", find_zero_duplicate_window(14));
+    println!("Part 2: {}", part2(&jumps, &flows));
     Ok(())
 }
