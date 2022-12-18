@@ -10,7 +10,7 @@ fn str_to_id(s: &str) -> Id {
     [chars.next().unwrap(), chars.next().unwrap()]
 }
 
-fn id_to_string(id: &Id) -> String {
+fn _id_to_string(id: &Id) -> String {
     [id[0], id[1]].iter().collect()
 }
 

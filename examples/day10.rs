@@ -57,7 +57,6 @@ fn do_cycle_p2(cycle: &mut i32, reg: i32, screen: &mut Vec<Vec<bool>>) {
 fn main() -> anyhow::Result<()> {
     let mut reg = 1;
     let mut cycle = 1;
-    let mut sum = 0;
     let extras = "noop\nnoop\nnoop\n";
     let mut screen = vec![vec![false; 40]; 6];
 
