@@ -104,9 +104,16 @@ impl Blueprint {
     }
 }
 
-fn options(resources: &HashMap<Resource, usize>, blueprint: &Blueprint) -> Vec<(Resource, Costs)> {
+fn options(
+    ignore: &[Resource],
+    resources: &HashMap<Resource, usize>,
+    blueprint: &Blueprint,
+) -> Vec<(Resource, Costs)> {
     let mut options = Vec::with_capacity(4);
     for (bot, bot_costs) in &blueprint.0 {
+        if ignore.contains(bot) {
+            continue;
+        }
         if bot_costs
             .0
             .iter()
@@ -116,6 +123,19 @@ fn options(resources: &HashMap<Resource, usize>, blueprint: &Blueprint) -> Vec<(
         }
     }
     options
+}
+
+fn triangular(n: usize) -> usize {
+    match n {
+        0 => 0,
+        1 => 1,
+        2 => 3,
+        3 => 6,
+        4 => 10,
+        5 => 15,
+        6 => 21,
+        _ => unimplemented!(),
+    }
 }
 
 static mut TURNS_SIMULATED: usize = 0;
@@ -149,28 +169,43 @@ fn simulate_dfs(
 
     unsafe { TURNS_SIMULATED += 1 };
 
-    if time == 0 {
+    if time == 1 {
         unsafe { STRATEGIES_SIMULATED += 1 };
-        return vec![resources[&Resource::Geode]];
+        return vec![resources[&Resource::Geode] + bots[&Resource::Geode]];
     }
 
-    let opts = options(&resources, &blueprint);
+    let time = time - 1;
+    let mut ignore = Vec::with_capacity(4);
+    if time <= 2 {
+        ignore.push(Resource::Clay);
+    }
+    let opts = options(&ignore, &resources, &blueprint);
 
-    // Simulate all options
+    // If we cannot benefit from any more geode bots, return whatever current bots are able to mine
+    if time <= 6 {
+        let geode_bot_cost_in_obsidian = blueprint.geode_bot().0[1].1;
+        let maximum_possible_obsidian =
+            // Current obsidian + minable by current bots + minable by future bots (if we build one per turn)
+            resources[&Resource::Obsidian] + time * bots[&Resource::Obsidian] + triangular(time);
+        if geode_bot_cost_in_obsidian > maximum_possible_obsidian {
+            unsafe { STRATEGIES_SIMULATED += 1 };
+            return vec![resources[&Resource::Geode] + time * bots[&Resource::Geode]];
+        }
+    }
+
     let mut v = vec![];
-    for opt in opts {
-        let geodes = simulate_dfs(
-            Some(opt),
-            time - 1,
-            resources.clone(),
-            bots.clone(),
-            blueprint,
-        );
+
+    // Simulate the option where we don't build anything, though skip it if we have the choice of buildin any of the four bots
+    if opts.len() != 4 {
+        let geodes = simulate_dfs(None, time, resources.clone(), bots.clone(), blueprint);
         v.extend(geodes);
     }
-    // Also simulate the option where we don't build anything
-    let geodes = simulate_dfs(None, time - 1, resources.clone(), bots.clone(), blueprint);
-    v.extend(geodes);
+
+    // Simulate all bot options
+    for opt in opts {
+        let geodes = simulate_dfs(Some(opt), time, resources.clone(), bots.clone(), blueprint);
+        v.extend(geodes);
+    }
     v
 }
 
@@ -195,7 +230,7 @@ fn simulate_all(blueprint: &Blueprint) -> Vec<usize> {
     let time = 24;
 
     // Initial options available
-    let initial_opts = options(&resources, &blueprint);
+    let initial_opts = options(&vec![], &resources, &blueprint);
 
     // Simulate all options
     let mut v = vec![];
