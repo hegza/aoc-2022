@@ -12,14 +12,8 @@ fn collect(positions: &[usize], file: &[isize]) -> Vec<isize> {
     positions.iter().map(|pos| file[*pos]).collect_vec()
 }
 
-fn mix(file: &[isize]) -> Vec<isize> {
-    let mut positions = (0..file.len()).collect_vec();
-
-    //println!("Initial:\n{:?}", &collect(&positions, &file));
-
-    // Just sort the indices
-    let mut pos_idx = 0;
-    while pos_idx != file.len() {
+fn mix(positions: &mut Vec<usize>, file: &[isize]) {
+    for pos_idx in 0..file.len() {
         let curpos = positions.iter().position(|p| *p == pos_idx).unwrap();
         let value = file[pos_idx];
         let npos = new_pos(curpos, value, file.len());
@@ -29,19 +23,42 @@ fn mix(file: &[isize]) -> Vec<isize> {
 
         // Insert the item at new position
         positions.insert(npos, item);
-
-        //println!("{:?}", &collect(&positions, &file));
-
-        debug_assert_eq!(
-            file[positions[npos]], value,
-            "incorrect result when moving {} from {} to {}",
-            value, curpos, npos
-        );
-
-        pos_idx += 1;
     }
+}
 
+fn mix_and_collect(file: &[isize]) -> Vec<isize> {
+    let mut positions = (0..file.len()).collect_vec();
+    mix(&mut positions, &file);
     collect(&positions, &file)
+}
+
+fn part1(file: &[isize]) -> isize {
+    let mixed = mix_and_collect(&file);
+
+    let pos_of_zero = mixed.iter().position(|v| *v == 0).unwrap();
+
+    let n1 = mixed[(pos_of_zero + 1000) % mixed.len()];
+    let n2 = mixed[(pos_of_zero + 2000) % mixed.len()];
+    let n3 = mixed[(pos_of_zero + 3000) % mixed.len()];
+    n1 + n2 + n3
+}
+
+fn part2(file: &[isize]) -> isize {
+    let key = 811589153;
+    let file = file.iter().map(|x| *x * key).collect_vec();
+
+    let mut positions = (0..file.len()).collect_vec();
+    for _ in 0..10 {
+        mix(&mut positions, &file);
+    }
+    let mixed = collect(&positions, &file);
+
+    let pos_of_zero = mixed.iter().position(|v| *v == 0).unwrap();
+
+    let n1 = mixed[(pos_of_zero + 1000) % mixed.len()];
+    let n2 = mixed[(pos_of_zero + 2000) % mixed.len()];
+    let n3 = mixed[(pos_of_zero + 3000) % mixed.len()];
+    n1 + n2 + n3
 }
 
 fn main() -> anyhow::Result<()> {
@@ -50,16 +67,8 @@ fn main() -> anyhow::Result<()> {
         .map(|line| line.parse::<isize>().unwrap())
         .collect_vec();
 
-    let mixed = mix(&file);
-
-    let pos_of_zero = mixed.iter().position(|v| *v == 0).unwrap();
-
-    let n1 = mixed[(pos_of_zero + 1000) % mixed.len()];
-    let n2 = mixed[(pos_of_zero + 2000) % mixed.len()];
-    let n3 = mixed[(pos_of_zero + 3000) % mixed.len()];
-    let part1 = n1 + n2 + n3;
-
-    println!("Part 1: {}", part1);
+    println!("Part 2: {}", part1(&file));
+    println!("Part 2: {}", part2(&file));
 
     Ok(())
 }
