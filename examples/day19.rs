@@ -195,7 +195,7 @@ fn simulate_dfs(
 
     let mut v = vec![];
 
-    // Simulate the option where we don't build anything, though skip it if we have the choice of buildin any of the four bots
+    // Simulate the option where we don't build anything, though skip it if we have the choice of building any of the four bots
     if opts.len() != 4 {
         let geodes = simulate_dfs(None, time, resources.clone(), bots.clone(), blueprint);
         v.extend(geodes);
