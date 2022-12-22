@@ -1,3 +1,5 @@
+use itertools::Itertools;
+use regex::Regex;
 use std::{
     collections::HashMap,
     convert::Infallible,
@@ -42,11 +44,11 @@ impl From<Vec<(Resource, usize)>> for Costs {
 }
 
 #[derive(Default, Debug)]
-struct Blueprint(HashMap<Resource, Costs>);
+struct Blueprint(usize, HashMap<Resource, Costs>);
 
 impl Blueprint {
-    fn from_bot_costs(bot_costs: Vec<(Resource, Costs)>) -> Self {
-        let bp = Blueprint(bot_costs.into_iter().collect());
+    fn from_bot_costs(id: usize, bot_costs: Vec<(Resource, Costs)>) -> Self {
+        let bp = Blueprint(id, bot_costs.into_iter().collect());
 
         debug_assert!(
             bp.ore_bot().0.len() != 0
@@ -59,22 +61,22 @@ impl Blueprint {
     }
 
     fn ore_bot(&self) -> &Costs {
-        &self.0[&Resource::Ore]
+        &self.1[&Resource::Ore]
     }
     fn clay_bot(&self) -> &Costs {
-        &self.0[&Resource::Clay]
+        &self.1[&Resource::Clay]
     }
     fn obsidian_bot(&self) -> &Costs {
-        &self.0[&Resource::Obsidian]
+        &self.1[&Resource::Obsidian]
     }
     fn geode_bot(&self) -> &Costs {
-        &self.0[&Resource::Geode]
+        &self.1[&Resource::Geode]
     }
 }
 
 impl Blueprint {
     fn parse(s: &str) -> anyhow::Result<Blueprint> {
-        let cost_sents = s.split_once(':').unwrap().1;
+        let (id_str, cost_sents) = s.split_once(':').unwrap();
 
         let bot_re = Regex::new(r"Each (\w+) robot")?;
         let cost_re = Regex::new(r"(\d+) ([a-z]+)")?;
@@ -99,7 +101,14 @@ impl Blueprint {
             })
             .collect_vec();
 
-        let bp = Blueprint::from_bot_costs(bot_costs);
+        let id = id_str
+            .split_ascii_whitespace()
+            .skip(1)
+            .next()
+            .unwrap()
+            .parse::<usize>()
+            .unwrap();
+        let bp = Blueprint::from_bot_costs(id, bot_costs);
         Ok(bp)
     }
 }
@@ -110,7 +119,7 @@ fn options(
     blueprint: &Blueprint,
 ) -> Vec<(Resource, Costs)> {
     let mut options = Vec::with_capacity(4);
-    for (bot, bot_costs) in &blueprint.0 {
+    for (bot, bot_costs) in &blueprint.1 {
         if ignore.contains(bot) {
             continue;
         }
@@ -195,7 +204,9 @@ fn simulate_dfs(
 
     let mut v = vec![];
 
-    // Simulate the option where we don't build anything, though skip it if we have the choice of building any of the four bots
+    // Simulate the option where we don't build anything, though skip it if we
+    // have the choice of building any of the four bots (because then there is
+    // nothing to save for)
     if opts.len() != 4 {
         let geodes = simulate_dfs(None, time, resources.clone(), bots.clone(), blueprint);
         v.extend(geodes);
@@ -257,13 +268,14 @@ fn main() -> anyhow::Result<()> {
         let mut ptime = SystemTime::now();
         let mut pturns = unsafe { TURNS_SIMULATED };
         let mut pstrats = unsafe { STRATEGIES_SIMULATED };
+        const INTERVAL_SEC: u64 = 5;
         while unsafe { PERF } {
             let since_last_measure = SystemTime::now().duration_since(ptime).unwrap();
-            if since_last_measure >= Duration::from_secs(1) {
+            if since_last_measure >= Duration::from_secs(INTERVAL_SEC) {
                 let turns = unsafe { TURNS_SIMULATED };
                 let strats = unsafe { STRATEGIES_SIMULATED };
-                let ktps = (turns - pturns) / 1000;
-                let ksps = (strats - pstrats) / 1000;
+                let ktps = (turns - pturns) / 1000 / INTERVAL_SEC as usize;
+                let ksps = (strats - pstrats) / 1000 / INTERVAL_SEC as usize;
                 println!(
                     "Turns per second: {} k, strategies per second: {} k",
                     ktps, ksps
@@ -276,16 +288,20 @@ fn main() -> anyhow::Result<()> {
     });
 
     let sum: usize = blueprints
+        //.par_iter()
         .iter()
-        .enumerate()
-        .map(|(idx, bp)| {
-            let id = idx + 1;
+        .map(|bp| {
+            let id = bp.0;
             let geodes = simulate_all(bp);
             let best = geodes.into_iter().max().unwrap();
-            println!("Blueprint {} simulated", id);
-            (id, best)
+            println!(
+                "Blueprint {} simulated: {} (quality = {})",
+                id,
+                best,
+                id * best
+            );
+            id * best
         })
-        .map(|(id, best)| id * best)
         .sum();
 
     println!("Part 1: {}", sum);
