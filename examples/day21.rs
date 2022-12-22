@@ -30,6 +30,49 @@ fn resolve(start: &str, monkeys: &HashMap<String, Job>) -> usize {
     }
 }
 
+fn part1(monkeys: &HashMap<String, Job>) -> usize {
+    resolve("root", monkeys)
+}
+
+fn err(x: usize, left: &str, right: &str, monkeys: &mut HashMap<String, Job>) -> isize {
+    *monkeys.get_mut("humn").unwrap() = Job::Num(x);
+
+    let (left, right) = (resolve(left, &monkeys), resolve(right, &monkeys));
+    left as isize - right as isize
+}
+
+// N.b. somehow this converges on a number that's one too big ':D
+fn part2(mut monkeys: HashMap<String, Job>) -> usize {
+    let root_job = monkeys.remove("root").unwrap();
+
+    if let Job::Op(_, sources) = root_job {
+        let (left, right) = (&sources[0], &sources[1]);
+
+        let mut x = 1_000_000_000_000.;
+
+        for _ in 0..10 {
+            let x1 = x + (x / 1_000_000_000.);
+
+            let y = err(x as usize, left, right, &mut monkeys) as f64;
+
+            let y1 = err(x1 as usize, left, right, &mut monkeys) as f64;
+
+            let diff_y = y1 - y;
+            let diff_x = x1 - x;
+            let diff = diff_y / diff_x;
+
+            println!("x: {:.0}, y: {}", x, y);
+
+            // Newton's method
+            x -= y / diff;
+        }
+
+        return x as usize;
+    }
+
+    0
+}
+
 fn main() -> anyhow::Result<()> {
     let mut jobs = HashMap::new();
 
@@ -63,7 +106,20 @@ fn main() -> anyhow::Result<()> {
         };
         jobs.insert(name_str.to_string(), job);
     }
+    println!("Part 1: {}", part1(&jobs));
 
-    println!("Part 1: {}", resolve("root", &jobs));
+    let job = jobs.remove("root").unwrap();
+    if let Job::Op(_, sources) = job {
+        // I figured this out with the part2 Newton's iteration above
+        *jobs.get_mut("humn").unwrap() = Job::Num(3093175982595);
+        /* 3093175982596 */
+        let (left, right) = (&sources[0], &sources[1]);
+        println!("left: {}, right: {}", left, right);
+        let left = resolve(left, &jobs);
+        let right = resolve(right, &jobs);
+        println!("left: {}, right: {}", left, right);
+        println!("diff: {}", left - right);
+    }
+
     Ok(())
 }
