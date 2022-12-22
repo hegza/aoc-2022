@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Clone)]
 enum Op {
     Add,
     Sub,
@@ -7,6 +8,7 @@ enum Op {
     Div,
 }
 
+#[derive(Clone)]
 enum Job {
     Num(usize),
     Op(Op, [String; 2]),
@@ -107,6 +109,7 @@ fn main() -> anyhow::Result<()> {
         jobs.insert(name_str.to_string(), job);
     }
     println!("Part 1: {}", part1(&jobs));
+    println!("Part 2: {}", part2(jobs.clone()));
 
     let job = jobs.remove("root").unwrap();
     if let Job::Op(_, sources) = job {
