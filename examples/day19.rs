@@ -7,9 +7,6 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use itertools::Itertools;
-use regex::Regex;
-
 const INPUT: &str = include_str!("inputs/day19.txt");
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
