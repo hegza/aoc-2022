@@ -1,4 +1,24 @@
+use itertools::Itertools;
+
 const INPUT: &str = include_str!("inputs/day1.txt");
+
+fn _functional() -> u32 {
+    let group_strs = INPUT.split("\n\n");
+    let mut elves_in_groups = group_strs
+        .map(|group| {
+            // Convert group of strs into group of integers
+            group
+                .lines()
+                .map(|line| line.parse::<u32>().unwrap())
+                .collect_vec()
+        })
+        .collect_vec();
+
+    elves_in_groups.sort_by(|a, b| a.iter().sum::<u32>().cmp(&b.iter().sum::<u32>()));
+
+    let fattest = elves_in_groups.last().unwrap();
+    fattest.into_iter().sum::<u32>()
+}
 
 fn main() -> anyhow::Result<()> {
     let mut elves = vec![];
